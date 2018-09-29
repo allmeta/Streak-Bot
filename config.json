@@ -1,10 +1,6 @@
 {
-    "servers": {
-        "193333756772352000": {
-            "allowed_channels": [
-                "278256161239859210"
-            ]
-        }
-    },
-    "token": "NDM1ODQzNTA2NzIwNzM1MjMy.DbpJcQ.6Acj-cH_EDz6vSOK7HH3jGI6kNg"
+    "allowed_channels": [
+        "495395511868588038"
+    ],
+    "token": "NDk1MzkzODQ3NDA1NDQ1MTQx.DpBcNw.p22P1oBdZHmaPHAvm-dnrYhIdxA"
 }
