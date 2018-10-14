@@ -170,13 +170,14 @@ async def updateStreaks():
                     print('RESET STREAK FORBIDDEN: nickname of {} in {}'.format(
                         member.name, member.server.name))
             else:
-                await changeNickname(user[3], server, user)
+                await changeNickname(user[1], user[0])
 
         c.execute("UPDATE TODAY SET DATE = ?", (getTodayStr(),))
         conn.commit()
         conn.close()
     # resub for next day
     if(scheduler):
+        i = date.now()
         scheduler.add_job(updateStreaks, 'date',
                           run_date=date(i.year, i.month, i.day+1))
     else:
