@@ -19,59 +19,64 @@ except NameError:
 
 client = commands.Bot(command_prefix='.')
 scheduler = None
-conn = sqlite3.connect("streakbot.db")
-c = conn.cursor()
 
 
 @client.command(pass_context=True)  # nani
 async def recent(ctx):
     # !recent @member
+    conn = sqlite3.connect("streakbot.db")
+    c = conn.cursor()
     member = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
-    t = data["servers"][member.server.id]["streaks"][member.id]["lastJoined"]
-    # t = t.replace('T', ' ')[:-7]
+    c.execute("SELECT LASTJOINED FROM USERS WHERE ID = ?", (member.id,))
 
-    await client.say("Last joined: {}".format(t))
+    await client.say("Last joined: {}".format(c.fetchone()[0]))
+    conn.close()
     # write message data["servers"][]...
-
-lval = ["total", "highest"]
 
 
 @client.command(pass_context=True)
 async def top(ctx, *args):
-    ###
+    conn = sqlite3.connect("streakbot.db")
+    c = conn.cursor()
+
+    lval = ["total", "highest"]
     leaderboard = "current"
+
     if args:
         if args[0] in lval:
             leaderboard = args[0]
         else:
-            await client.say("`!top --[total | highest]`")
+            await client.say("Usage: `!top --[total | highest]`")
             return
 
-    x = data["servers"][ctx.message.author.server.id]["streaks"]
+    c.execute("SELECT ID, {} FROM USERS WHERE SERVERID = ?".format(leaderboard.upper()),
+              (ctx.message.author.server.id,))
+    x = c.fetchall()
 
-    sortedUsers = [(k, x[k]) for k in x]
-    sortedUsers.sort(key=lambda x: x[1][leaderboard], reverse=True)
+    sortedUsers = [(k[0], k[1]) for k in x]
+    sortedUsers.sort(key=lambda x: x[1], reverse=True)
 
     embed = discord.Embed(
-        title="TOP {} STREAKS:".format(str.upper(leaderboard)),
+        title="TOP {} STREAKS:".format(leaderboard.upper()),
         colour=discord.Colour.gold()
     )
-    embed.set_footer(text="All Meta@2540 and Qwikk@2929")
+    embed.set_footer(text="Spaghetti code by All Meta@2540 and Qwikk@2929")
     embed.set_author(name="Streak Bot", icon_url=client.user.avatar_url)
     emotes = ["🥇", "🥈", "🥉", "🏅", "🏅"]
     eIndex = 0
     for i in range(min(len(sortedUsers), 5)):
-        if sortedUsers[i][1][leaderboard] != sortedUsers[max(
-                0, i-1)][1][leaderboard]:
+        if sortedUsers[i][1] != sortedUsers[max(
+                0, i-1)][1]:
             eIndex += 1
         embed.add_field(name="#{}".format(
             eIndex+1), value=emotes[eIndex], inline=True)  # ❤❤❤❤❤❤
         embed.add_field(name="> {}".format(ctx.message.author.server.get_member(sortedUsers[i][0]).name),
-                        value="\t{} 🔥".format(sortedUsers[i][1][leaderboard]), inline=True)
+                        value="{} 🔥".format(sortedUsers[i][1]), inline=True)
 
     embed.set_thumbnail(
         url='https://www.shareicon.net/download/2016/08/19/817655_podium_512x512.png')
     await client.say(embed=embed)
+    conn.close()
 
 
 @client.command(pass_context=True)
@@ -95,12 +100,10 @@ async def peder(ctx):
 
 @client.command(pass_context=True)
 async def streak(ctx):
-
-    s = ctx.message.author.server
     user = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
     if(not memberExists(user)):
         await addMember(user)
-    await client.say("{} has {}🔥".format(user.name, data["servers"][s.id]["streaks"][user.id]["current"]))
+    await client.say("{} has {}🔥".format(user.name, getCurrentStreak(user.id)))
 
 
 @client.event
@@ -114,20 +117,17 @@ async def on_ready():
 @client.event
 async def on_voice_state_update(before, after):
     b, a = before.voice.voice_channel, after.voice.voice_channel
-    # can come from another server
     if (not b and a or b and not a):
-            # update last joined voice
-        if(not serverExists(after.server)):
-            addServer(after.server)
+
         if(not memberExists(after)):
             await addMember(after)
+
         updateLastJoined(after)
+
         if not hasDaily(after):
-            # add streak
             giveStreak(after)
 
-        await changeNickname(data["servers"][after.server.id]["streaks"][after.id]["current"],
-                             after.server.id,
+        await changeNickname(after.server.id,
                              after.id)
 
 
@@ -135,38 +135,48 @@ async def on_voice_state_update(before, after):
 async def on_member_update(before, after):
     b, a = before.nick, after.nick
     if(b != a and memberExists(after)):
-        strk = data["servers"][
-            after.server.id]["streaks"][after.id]["current"]
-        await changeNickname(strk, after.server.id, after.id)
+        await changeNickname(after.server.id, after.id)
+
+
+def getCurrentStreak(id):
+    conn = sqlite3.connect("streakbot.db")
+    c = conn.cursor()
+    c.execute("SELECT CURRENT FROM USERS WHERE ID = ?", (id,))
+    d = c.fetchone()[0]
+    conn.close()
+    return d
 
 
 async def updateStreaks():
     # check date
-    if getTodayStr() != data["today"]:
-        # go through everyone in every server and update streaks
-        servers = data["servers"]
-        for server, sval in servers.items():
-            for user, userval in sval["streaks"].items():
+    conn = sqlite3.connect("streakbot.db")
+    c = conn.cursor()
+    c.execute("SELECT DATE FROM TODAY")
+    if getTodayStr() != c.fetchone()[0]:
+        for user in c.execute("SELECT ID, SERVERID, DAILY, CURRENT FROM USERS"):
+            member = client.get_server(user[1]).get_member(user[0])
+            if member.voice.voice_channel == None:
+                c.execute(
+                    "UPDATE USERS SET DAILY = 0 WHERE ID = ?", (user[0],))
+            else:
+                giveStreak(member)
 
-                member = client.get_server(server).get_member(user)
-                if not inVoice(member):
-                    data["servers"][server]["streaks"][user]["daily"] = False
-                else:
-                    giveStreak(member)
+            if user[2] == 0 and user[3] > 0:
+                c.execute(
+                    "UPDATE USERS SET CURRENT = 0 WHERE ID = ?", (user[0],))
+                try:
+                    await client.change_nickname(
+                        member, ''.join(member.nick.split('🔥 ')[1:]))
+                    print("RESET STREAK: %s" % (member.name))
+                except discord.errors.Forbidden:
+                    print('RESET STREAK FORBIDDEN: nickname of {} in {}'.format(
+                        member.name, member.server.name))
+            else:
+                await changeNickname(user[3], server, user)
 
-                if userval["daily"] is False and userval["current"] > 0:
-                    data["servers"][server]["streaks"][user]["current"] = 0
-                    try:
-                        await client.change_nickname(
-                            member, ''.join(member.nick.split('🔥 ')[1:]))
-                        print("RESET STREAK: %s" % (member.name))
-                    except discord.errors.Forbidden:
-                        print('RESET STREAK FORBIDDEN: nickname of {} in {}'.format(
-                            member.name, member.server.name))
-                else:
-                    await changeNickname(data["servers"][server]["streaks"][user]["current"], server, user)
-
-        data["today"] = getTodayStr()
+        c.execute("UPDATE TODAY SET DATE = ?", (getTodayStr(),))
+        conn.commit()
+        conn.close()
     # resub for next day
     if(scheduler):
         scheduler.add_job(updateStreaks, 'date',
@@ -175,14 +185,11 @@ async def updateStreaks():
         await subscribeToTimeout()
 
 
-def inVoice(member):
-    return member.voice.voice_channel is not None
-
-
-async def changeNickname(strk, server, user):
+async def changeNickname(serverid, userid):
+    strk = getCurrentStreak(userid)
     if strk > 0:
         try:
-            userobj = client.get_server(server).get_member(user)
+            userobj = client.get_server(serverid).get_member(userid)
             nick = userobj.nick
             if nick and '🔥 ' in nick:
                 nick = ''.join(userobj.nick.split('🔥 ')[1:])
@@ -210,50 +217,54 @@ def getTodayStr():
     i = datetime.now()
     return "%s/%s/%s" % (i.day, i.month, i.year)
 
-# meme for å lage command, ikke relevant
-
 
 def updateLastJoined(member):
-    data["servers"][str(member.server.id)]["streaks"][str(
-        member.id)]["lastJoined"] = datetime.now().ctime()
-    writeToJson()
-
-
-def serverExists(server):
-    return str(server.id) in data["servers"]
-
-
-def addServer(server):
-    data["servers"][str(server.id)] = {"streaks": {}}
-    writeToJson()
+    conn = sqlite3.connect("streakbot.db")
+    c = conn.cursor()
+    c.execute("UPDATE USERS SET LASTJOINED = ? WHERE ID = ?",
+              (datetime.now().ctime(), member.id,))
+    conn.commit()
+    conn.close()
 
 
 def memberExists(member):
-    return str(member.id) in data["servers"][str(member.server.id)]["streaks"]
+    conn = sqlite3.connect("streakbot.db")
+    c = conn.cursor()
+    c.execute("SELECT 1 FROM USERS WHERE ID = ?", (member.id,))
+    d = c.fetchone()
+    conn.close()
+    return True if d != None else False
 
 
 async def addMember(member):
-    data["servers"][str(member.server.id)]["streaks"][str(member.id)] = {
-        "current": 0, "daily": False, "lastJoined": False, "total": 0, "highest": 0}
-    writeToJson()
-    await changeNickname(0, member.server.id, member.id)
+    conn = sqlite3.connect("streakbot.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO USERS VALUES (?,?,?,?,?,?,?)",
+              (member.id, member.server.id, datetime.now().ctime(), 0, 0, 0, 0,))
+    conn.commit()
+    conn.close()
 # if done daily
 
 
 def hasDaily(member):
-    return data["servers"][str(member.server.id)]["streaks"][str(member.id)]["daily"]
+    conn = sqlite3.connect("streakbot.db")
+    c = conn.cursor()
+    c.execute('SELECT DAILY FROM USERS WHERE ID = ?', (member.id,))
+    d = c.fetchone()[0]
+    conn.close()
+    return d == 1
 
 
 def giveStreak(member):
-    data["servers"][str(member.server.id)]["streaks"][str(
-        member.id)]["daily"] = True
-    data["servers"][str(member.server.id)
-                    ]["streaks"][str(member.id)]["current"] += 1
-    data["servers"][str(member.server.id)
-                    ]["streaks"][str(member.id)]["total"] += 1
-    data["servers"][str(member.server.id)
-                    ]["streaks"][str(member.id)]["highest"] = max(data["servers"][str(member.server.id)]["streaks"][str(member.id)]["current"], data["servers"][str(member.server.id)]["streaks"][str(member.id)]["highest"])
-    writeToJson()
+    conn = sqlite3.connect("streakbot.db")
+    c = conn.cursor()
+    c.execute("SELECT CURRENT, TOTAL, HIGHEST FROM USERS WHERE ID = ?",
+              (member.id,))
+    cur, tot, hi = c.fetchone()
+    c.execute("UPDATE USERS SET DAILY = 1, CURRENT = ?, TOTAL = ?, Highest = ? WHERE ID = ?",
+              (cur+1, tot+1, max(cur, hi), member.id,))
+    conn.commit()
+    conn.close()
 
 
 client.run(config['token'])
