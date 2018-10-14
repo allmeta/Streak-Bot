@@ -194,7 +194,7 @@ async def changeNickname(serverid, userid):
             nick = userobj.nick
             if nick != None and '🔥 ' in nick:
                 nick = ''.join(userobj.nick.split('🔥 ')[1:])
-            else if nick == None:
+            elif nick == None:
                 nick = userobj.name
             try:
                 await client.change_nickname(
