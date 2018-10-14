@@ -192,17 +192,16 @@ async def changeNickname(serverid, userid):
         try:
             userobj = client.get_server(serverid).get_member(userid)
             nick = userobj.nick
-            if nick and '🔥 ' in nick:
+            if nick != None and '🔥 ' in nick:
                 nick = ''.join(userobj.nick.split('🔥 ')[1:])
-            if not nick:
+            else if nick == None:
                 nick = userobj.name
-            else:
-                try:
-                    await client.change_nickname(
-                        userobj, f"{strk}🔥 {nick}")
-                except discord.errors.HTTPException as e:
-                    print(
-                        f"{e} when setting nickname of {userobj.nick} to {strk}🔥 {nick}")
+            try:
+                await client.change_nickname(
+                    userobj, f"{strk}🔥 {nick}")
+            except discord.errors.HTTPException as e:
+                print(
+                    f"{e} when setting nickname of {userobj.nick} to {strk}🔥 {nick}")
         except discord.errors.Forbidden:
             print(
                 f'FORBIDDEN: nickname of {userobj.name} in {userobj.server.name}')
