@@ -28,7 +28,7 @@ async def recent(ctx):
     c.execute("SELECT LASTJOINED FROM USERS WHERE (ID = ? AND SERVERID = ?)",
               (member.id, member.server.id,))
 
-    await client.say("Last joined: {}".format(c.fetchone()[0]))
+    await client.say(f"Last joined: {c.fetchone()[0]}")
     conn.close()
     # write message data["servers"][]...
 
@@ -48,7 +48,7 @@ async def top(ctx, *args):
             await client.say("Usage: `!top --[total | highest]`")
             return
 
-    c.execute("SELECT ID, {} FROM USERS WHERE SERVERID = ?".format(leaderboard.upper()),
+    c.execute(f"SELECT ID, {leaderboard.upper()} FROM USERS WHERE SERVERID = ?",
               (ctx.message.author.server.id,))
     x = c.fetchall()
 
@@ -56,7 +56,7 @@ async def top(ctx, *args):
     sortedUsers.sort(key=lambda x: x[1], reverse=True)
 
     embed = discord.Embed(
-        title="TOP {} STREAKS:".format(leaderboard.upper()),
+        title=f"TOP {leaderboard.upper()} STREAKS:",
         colour=discord.Colour.gold()
     )
     embed.set_footer(text="Spaghetti code by All Meta@2540 and Qwikk@2929")
@@ -67,10 +67,10 @@ async def top(ctx, *args):
         if sortedUsers[i][1] != sortedUsers[max(
                 0, i-1)][1]:
             eIndex += 1
-        embed.add_field(name="#{}".format(
-            eIndex+1), value=emotes[eIndex], inline=True)  # ❤❤❤❤❤❤
-        embed.add_field(name="> {}".format(ctx.message.author.server.get_member(sortedUsers[i][0]).name),
-                        value="{} 🔥".format(sortedUsers[i][1]), inline=True)
+        embed.add_field(name=f"#{eIndex+1}",
+                        value=emotes[eIndex], inline=True)
+        embed.add_field(name=f"> {ctx.message.author.server.get_member(sortedUsers[i][0]).name}",
+                        value=f"{sortedUsers[i][1]} 🔥", inline=True)
 
     embed.set_thumbnail(
         url='https://www.shareicon.net/download/2016/08/19/817655_podium_512x512.png')
@@ -167,10 +167,10 @@ async def updateStreaks():
                 try:
                     await client.change_nickname(
                         member, ''.join(member.nick.split('🔥 ')[1:]))
-                    print("RESET STREAK: %s" % (member.name))
+                    print(f"RESET STREAK: {member.name}")
                 except discord.errors.Forbidden:
-                    print('RESET STREAK FORBIDDEN: nickname of {} in {}'.format(
-                        member.name, member.server.name))
+                    print(
+                        f'RESET STREAK FORBIDDEN: nickname of {member.name} in {member.server.name}')
             else:
                 await changeNickname(user[1], user[0])
 
@@ -197,11 +197,15 @@ async def changeNickname(serverid, userid):
             if not nick:
                 nick = userobj.name
             else:
-                await client.change_nickname(
-                    userobj, "{}🔥 {}".format(strk, nick))
+                try:
+                    await client.change_nickname(
+                        userobj, f"{strk}🔥 {nick}")
+                except discord.errors.HTTPException as e:
+                    print(
+                        f"{e} when setting nickname of {userobj.nick} to {strk}🔥 {nick}")
         except discord.errors.Forbidden:
-            print('FORBIDDEN: nickname of {} in {}'.format(
-                userobj.name, userobj.server.name))
+            print(
+                f'FORBIDDEN: nickname of {userobj.name} in {userobj.server.name}')
 
 
 async def subscribeToTimeout():
