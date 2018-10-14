@@ -25,7 +25,8 @@ async def recent(ctx):
     conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     member = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
-    c.execute("SELECT LASTJOINED FROM USERS WHERE ID = ?", (member.id,))
+    c.execute("SELECT LASTJOINED FROM USERS WHERE ID = ?, SERVERID = ?",
+              (member.id, member.server.id,))
 
     await client.say("Last joined: {}".format(c.fetchone()[0]))
     conn.close()
@@ -101,7 +102,7 @@ async def streak(ctx):
     user = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
     if(not memberExists(user)):
         await addMember(user)
-    await client.say("{} has {}🔥".format(user.name, getCurrentStreak(user.id)))
+    await client.say("{} has {}🔥".format(user.name, getCurrentStreak(user.id, user.server.id)))
 
 
 @client.event
@@ -136,10 +137,11 @@ async def on_member_update(before, after):
         await changeNickname(after.server.id, after.id)
 
 
-def getCurrentStreak(id):
+def getCurrentStreak(id, serverid):
     conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
-    c.execute("SELECT CURRENT FROM USERS WHERE ID = ?", (id,))
+    c.execute("SELECT CURRENT FROM USERS WHERE ID = ?, SERVERID = ?",
+              (id, serverid,))
     d = c.fetchone()[0]
     conn.close()
     return d
@@ -155,13 +157,13 @@ async def updateStreaks():
             member = client.get_server(user[1]).get_member(user[0])
             if member.voice.voice_channel == None:
                 c.execute(
-                    "UPDATE USERS SET DAILY = 0 WHERE ID = ?", (user[0],))
+                    "UPDATE USERS SET DAILY = 0 WHERE ID = ?, SERVERID = ?", (user[0], user[1],))
             else:
                 giveStreak(member)
 
             if user[2] == 0 and user[3] > 0:
                 c.execute(
-                    "UPDATE USERS SET CURRENT = 0 WHERE ID = ?", (user[0],))
+                    "UPDATE USERS SET CURRENT = 0 WHERE ID = ?, SERVERID = ?", (user[0], user[1],))
                 try:
                     await client.change_nickname(
                         member, ''.join(member.nick.split('🔥 ')[1:]))
@@ -185,7 +187,7 @@ async def updateStreaks():
 
 
 async def changeNickname(serverid, userid):
-    strk = getCurrentStreak(userid)
+    strk = getCurrentStreak(userid, serverid)
     if strk > 0:
         try:
             userobj = client.get_server(serverid).get_member(userid)
@@ -220,8 +222,8 @@ def getTodayStr():
 def updateLastJoined(member):
     conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
-    c.execute("UPDATE USERS SET LASTJOINED = ? WHERE ID = ?",
-              (datetime.now().ctime(), member.id,))
+    c.execute("UPDATE USERS SET LASTJOINED = ? WHERE ID = ?, SERVERID = ?",
+              (datetime.now().ctime(), member.id, member.server.id,))
     conn.commit()
     conn.close()
 
@@ -229,7 +231,8 @@ def updateLastJoined(member):
 def memberExists(member):
     conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
-    c.execute("SELECT 1 FROM USERS WHERE ID = ?", (member.id,))
+    c.execute("SELECT 1 FROM USERS WHERE ID = ?, SERVERID = ?",
+              (member.id, member.server.id,))
     d = c.fetchone()
     conn.close()
     return True if d != None else False
@@ -248,7 +251,8 @@ async def addMember(member):
 def hasDaily(member):
     conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
-    c.execute('SELECT DAILY FROM USERS WHERE ID = ?', (member.id,))
+    c.execute('SELECT DAILY FROM USERS WHERE ID = ?, SERVERID = ?',
+              (member.id, member.server.id,))
     d = c.fetchone()[0]
     conn.close()
     return d == 1
@@ -257,11 +261,11 @@ def hasDaily(member):
 def giveStreak(member):
     conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
-    c.execute("SELECT CURRENT, TOTAL, HIGHEST FROM USERS WHERE ID = ?",
-              (member.id,))
+    c.execute("SELECT CURRENT, TOTAL, HIGHEST FROM USERS WHERE ID = ?, SERVERID = ?",
+              (member.id, member.server.id,))
     cur, tot, hi = c.fetchone()
-    c.execute("UPDATE USERS SET DAILY = 1, CURRENT = ?, TOTAL = ?, Highest = ? WHERE ID = ?",
-              (cur+1, tot+1, max(cur, hi), member.id,))
+    c.execute("UPDATE USERS SET DAILY = 1, CURRENT = ?, TOTAL = ?, Highest = ? WHERE ID = ?, SERVERID = ?",
+              (cur+1, tot+1, max(cur, hi), member.id, member.server.id,))
     conn.commit()
     conn.close()
 
