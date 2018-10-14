@@ -9,8 +9,6 @@ import sqlite3
 
 with open("config.json") as f:
     config = json.loads(f.read())
-with open("data.json") as f:
-    data = json.loads(f.read())
 
 try:
     to_unicode = unicode
