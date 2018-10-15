@@ -23,6 +23,7 @@ conn = None
 @client.command(pass_context=True)  # nani
 async def recent(ctx):
     # !recent @member
+    global conn
     g = True if conn == None else False
     if g:
         conn = sqlite3.connect("streakbot.db")
@@ -40,6 +41,7 @@ async def recent(ctx):
 
 @client.command(pass_context=True)
 async def top(ctx, *args):
+    global conn
     g = True if conn == None else False
     if g:
         conn = sqlite3.connect("streakbot.db")
@@ -148,6 +150,7 @@ async def on_member_update(before, after):
 
 
 def getCurrentStreak(id, serverid):
+    global conn
     g = True if conn == None else False
     if g:
         conn = sqlite3.connect("streakbot.db")
@@ -163,6 +166,7 @@ def getCurrentStreak(id, serverid):
 
 async def updateStreaks():
     # check date
+    global conn, scheduler
     conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     c.execute("SELECT DATE FROM TODAY")
@@ -230,6 +234,7 @@ async def changeNickname(serverid, userid):
 
 
 async def subscribeToTimeout():
+    global scheduler
     # timer to update streaks
     i = datetime.now()
     scheduler = AsyncIOScheduler()
@@ -246,6 +251,7 @@ def getTodayStr():
 
 
 def updateLastJoined(member):
+    global conn
     g = True if conn == None else False
     if g:
         conn = sqlite3.connect("streakbot.db")
@@ -259,6 +265,7 @@ def updateLastJoined(member):
 
 
 def memberExists(member):
+    global conn
     g = True if conn == None else False
     if g:
         conn = sqlite3.connect("streakbot.db")
@@ -273,6 +280,7 @@ def memberExists(member):
 
 
 async def addMember(member):
+    global conn
     g = True if conn == None else False
     if g:
         conn = sqlite3.connect("streakbot.db")
@@ -287,6 +295,7 @@ async def addMember(member):
 
 
 def hasDaily(member):
+    global conn
     g = True if conn == None else False
     if g:
         conn = sqlite3.connect("streakbot.db")
@@ -301,6 +310,7 @@ def hasDaily(member):
 
 
 def giveStreak(member):
+    global conn
     g = True if conn == None else False
     if g:
         conn = sqlite3.connect("streakbot.db")
