@@ -153,6 +153,7 @@ async def updateStreaks():
     c = conn.cursor()
     c.execute("SELECT DATE FROM TODAY")
     if getTodayStr() != c.fetchone()[0]:
+        print("Day changed, updating streaks!")
         for user in c.execute("SELECT ID, SERVERID, DAILY, CURRENT FROM USERS"):
             member = client.get_server(user[1]).get_member(user[0])
             if member.voice.voice_channel == None:
@@ -177,9 +178,12 @@ async def updateStreaks():
         c.execute("UPDATE TODAY SET DATE = ?", (getTodayStr(),))
         conn.commit()
         conn.close()
+    else:
+        print("Day hasn't changed")
     # resub for next day
-    if(scheduler):
+    if(scheduler != None):
         i = date.now()
+        print(f"New job executes in {24-i.hour} hours")
         scheduler.add_job(updateStreaks, 'date',
                           run_date=date(i.year, i.month, i.day+1))
     else:
@@ -201,7 +205,7 @@ async def changeNickname(serverid, userid):
                     userobj, f"{strk}🔥 {nick}")
             except discord.errors.HTTPException as e:
                 print(
-                    f"{e} when setting nickname of {userobj.nick} to {strk}🔥 {nick}")
+                    f"{e} when setting nickname of {userobj.name} to {strk}🔥 {nick}")
         except discord.errors.Forbidden:
             print(
                 f'FORBIDDEN: nickname of {userobj.name} in {userobj.server.name}')
@@ -213,6 +217,7 @@ async def subscribeToTimeout():
     scheduler = AsyncIOScheduler()
     scheduler.start()
     # scheduler.add_job(updateStreaks, 'interval', seconds=10)
+    print(f"New job executes in {24-i.hour} hours")
     scheduler.add_job(updateStreaks, 'date',
                       run_date=date(i.year, i.month, i.day+1))
 
