@@ -176,13 +176,10 @@ async def updateStreaks():
         users = c.fetchall()
         for user in users:
             member = client.get_server(user[1]).get_member(user[0])
-            print(member.voice.voice_channel)
             if member.voice.voice_channel == None:
-                print(f"NOT IN VOICE: {member.name}")
                 c.execute(
                     "UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
             else:
-                print(f"IN VOICE ON UPDATE: Giving {member.name} streak")
                 giveStreak(member)
 
             if user[2] == 0 and user[3] > 0:
@@ -198,7 +195,7 @@ async def updateStreaks():
             else:
                 await changeNickname(user[1], user[0])
 
-        # c.execute("UPDATE TODAY SET DATE = ?", (getTodayStr(),))
+        c.execute("UPDATE TODAY SET DATE = ?", (getTodayStr(),))
         conn.commit()
         conn.close()
         conn = None
