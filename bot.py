@@ -156,6 +156,7 @@ async def updateStreaks():
         print("Day changed, updating streaks!")
         for user in c.execute("SELECT ID, SERVERID, DAILY, CURRENT FROM USERS"):
             member = client.get_server(user[1]).get_member(user[0])
+            print(member.voice.voice_channel)
             if member.voice.voice_channel == None:
                 print(f"NOT IN VOICE: {member.name}")
                 c.execute(
