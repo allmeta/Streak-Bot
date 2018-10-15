@@ -17,25 +17,32 @@ except NameError:
 
 client = commands.Bot(command_prefix='.')
 scheduler = None
+conn = None
 
 
 @client.command(pass_context=True)  # nani
 async def recent(ctx):
     # !recent @member
-    conn = sqlite3.connect("streakbot.db")
+    g = True if conn == None else False
+    if g:
+        conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     member = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
     c.execute("SELECT LASTJOINED FROM USERS WHERE (ID = ? AND SERVERID = ?)",
               (member.id, member.server.id,))
 
     await client.say(f"Last joined: {c.fetchone()[0]}")
-    conn.close()
+    if g:
+        conn.close()
+        conn = None
     # write message data["servers"][]...
 
 
 @client.command(pass_context=True)
 async def top(ctx, *args):
-    conn = sqlite3.connect("streakbot.db")
+    g = True if conn == None else False
+    if g:
+        conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
 
     lval = ["total", "highest"]
@@ -75,7 +82,9 @@ async def top(ctx, *args):
     embed.set_thumbnail(
         url='https://www.shareicon.net/download/2016/08/19/817655_podium_512x512.png')
     await client.say(embed=embed)
-    conn.close()
+    if g:
+        conn.close()
+        conn = None
 
 
 @client.command(pass_context=True)
@@ -99,6 +108,7 @@ async def peder(ctx):
 
 @client.command(pass_context=True)
 async def streak(ctx):
+    # it works so wont check for conn == None etc
     user = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
     if(not memberExists(user)):
         await addMember(user)
@@ -138,12 +148,16 @@ async def on_member_update(before, after):
 
 
 def getCurrentStreak(id, serverid):
-    conn = sqlite3.connect("streakbot.db")
+    g = True if conn == None else False
+    if g:
+        conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     c.execute("SELECT CURRENT FROM USERS WHERE (ID = ? AND SERVERID = ?)",
               (id, serverid,))
     d = c.fetchone()[0]
-    conn.close()
+    if g:
+        conn.close()
+        conn = None
     return d
 
 
@@ -178,9 +192,10 @@ async def updateStreaks():
             else:
                 await changeNickname(user[1], user[0])
 
-        c.execute("UPDATE TODAY SET DATE = ?", (getTodayStr(),))
+        # c.execute("UPDATE TODAY SET DATE = ?", (getTodayStr(),))
         conn.commit()
         conn.close()
+        conn = None
     else:
         print("Day hasn't changed")
     # resub for next day
@@ -231,46 +246,64 @@ def getTodayStr():
 
 
 def updateLastJoined(member):
-    conn = sqlite3.connect("streakbot.db")
+    g = True if conn == None else False
+    if g:
+        conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     c.execute("UPDATE USERS SET LASTJOINED = ? WHERE (ID = ? AND SERVERID = ?)",
               (datetime.now().ctime(), member.id, member.server.id,))
     conn.commit()
-    conn.close()
+    if g:
+        conn.close()
+        conn = None
 
 
 def memberExists(member):
-    conn = sqlite3.connect("streakbot.db")
+    g = True if conn == None else False
+    if g:
+        conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     c.execute("SELECT 1 FROM USERS WHERE (ID = ? AND SERVERID = ?)",
               (member.id, member.server.id,))
     d = c.fetchone()
-    conn.close()
+    if g:
+        conn.close()
+        conn = None
     return True if d != None else False
 
 
 async def addMember(member):
-    conn = sqlite3.connect("streakbot.db")
+    g = True if conn == None else False
+    if g:
+        conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     c.execute("INSERT INTO USERS VALUES (?,?,?,?,?,?,?)",
               (member.id, member.server.id, datetime.now().ctime(), 0, 0, 0, 0,))
     conn.commit()
-    conn.close()
+    if g:
+        conn.close()
+        conn = None
 # if done daily
 
 
 def hasDaily(member):
-    conn = sqlite3.connect("streakbot.db")
+    g = True if conn == None else False
+    if g:
+        conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     c.execute('SELECT DAILY FROM USERS WHERE (ID = ? AND SERVERID = ?)',
               (member.id, member.server.id,))
     d = c.fetchone()[0]
-    conn.close()
+    if g:
+        conn.close()
+        conn = None
     return d == 1
 
 
 def giveStreak(member):
-    conn = sqlite3.connect("streakbot.db")
+    g = True if conn == None else False
+    if g:
+        conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     c.execute("SELECT CURRENT, TOTAL, HIGHEST FROM USERS WHERE (ID = ? AND SERVERID = ?)",
               (member.id, member.server.id,))
@@ -278,7 +311,9 @@ def giveStreak(member):
     c.execute("UPDATE USERS SET DAILY = 1, CURRENT = ?, TOTAL = ?, Highest = ? WHERE (ID = ? AND SERVERID = ?)",
               (cur+1, tot+1, max(cur+1, hi), member.id, member.server.id,))
     conn.commit()
-    conn.close()
+    if g:
+        conn.close()
+        conn = None
 
 
 client.run(config['token'])

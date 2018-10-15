@@ -10,6 +10,8 @@ def getTodayStr():
 conn = sqlite3.connect('streakbot.db')
 c = conn.cursor()
 
-# c.execute("SELECT DATE FROM TODAY")
-i = datetime.now()
-print(f"Time until execute: {24 - i.hour - i.minute/60}")
+# c.execute("SELECT ID, SERVERID, DAILY, CURRENT FROM USERS")
+conn.close()
+print(conn)
+# i = datetime.now()
+# print(f"Time until execute: {24 - i.hour - i.minute/60}")
