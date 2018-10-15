@@ -157,6 +157,7 @@ async def updateStreaks():
         for user in c.execute("SELECT ID, SERVERID, DAILY, CURRENT FROM USERS"):
             member = client.get_server(user[1]).get_member(user[0])
             if member.voice.voice_channel == None:
+                print(f"NOT IN VOICE: {member.name}")
                 c.execute(
                     "UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
             else:
