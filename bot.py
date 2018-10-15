@@ -160,6 +160,7 @@ async def updateStreaks():
                 c.execute(
                     "UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
             else:
+                print(f"IN VOICE ON UPDATE: Giving {member.name} streak")
                 giveStreak(member)
 
             if user[2] == 0 and user[3] > 0:
@@ -273,7 +274,7 @@ def giveStreak(member):
               (member.id, member.server.id,))
     cur, tot, hi = c.fetchone()
     c.execute("UPDATE USERS SET DAILY = 1, CURRENT = ?, TOTAL = ?, Highest = ? WHERE (ID = ? AND SERVERID = ?)",
-              (cur+1, tot+1, max(cur, hi), member.id, member.server.id,))
+              (cur+1, tot+1, max(cur+1, hi), member.id, member.server.id,))
     conn.commit()
     conn.close()
 
