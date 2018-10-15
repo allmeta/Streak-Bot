@@ -203,7 +203,7 @@ async def updateStreaks():
         print("Day hasn't changed")
     # resub for next day
     if(scheduler != None):
-        i = date.now()
+        i = datetime.now()
         print(f"New job executes in {24-i.hour} hours")
         scheduler.add_job(updateStreaks, 'date',
                           run_date=date(i.year, i.month, i.day+1))
