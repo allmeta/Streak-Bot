@@ -88,26 +88,6 @@ async def top(ctx, *args):
         conn.close()
         conn = None
 
-
-@client.command(pass_context=True)
-async def kreft(ctx):
-    k = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
-    for i in range(5):
-        await client.say("<@{}>".format(k.id))
-
-
-@client.command(pass_context=True)
-async def karl(ctx):
-    for i in range(5):
-        await client.say("<@{}>".format(ctx.message.author.server.get_member_named("KarlF#2868").id))
-
-
-@client.command(pass_context=True)
-async def peder(ctx):
-    for i in range(5):
-        await client.say("<@{}>".format(ctx.message.author.server.get_member_named("Plankiefy#0685").id))
-
-
 @client.command(pass_context=True)
 async def streak(ctx):
     # it works so wont check for conn == None etc
@@ -176,11 +156,15 @@ async def updateStreaks():
         users = c.fetchall()
         for user in users:
             member = client.get_server(user[1]).get_member(user[0])
-            if member.voice.voice_channel == None:
-                c.execute(
-                    "UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+            if member != None:
+                if member.voice.voice_channel == None:
+                    c.execute(
+                    	"UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+                else:
+                    giveStreak(member)
             else:
-                giveStreak(member)
+                c.execute("DELETE FROM USERS WHERE (ID = ? AND SERVERID = ?)", (user[0],user[1],))
+                continue
 
             if user[2] == 0 and user[3] > 0:
                 c.execute(
