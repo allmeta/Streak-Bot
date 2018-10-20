@@ -88,6 +88,7 @@ async def top(ctx, *args):
         conn.close()
         conn = None
 
+
 @client.command(pass_context=True)
 async def streak(ctx):
     # it works so wont check for conn == None etc
@@ -159,25 +160,26 @@ async def updateStreaks():
             if member != None:
                 if member.voice.voice_channel == None:
                     c.execute(
-                    	"UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+                        "UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
                 else:
                     giveStreak(member)
-            else:
-                c.execute("DELETE FROM USERS WHERE (ID = ? AND SERVERID = ?)", (user[0],user[1],))
-                continue
 
-            if user[2] == 0 and user[3] > 0:
-                c.execute(
-                    "UPDATE USERS SET CURRENT = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
-                try:
-                    await client.change_nickname(
-                        member, ''.join(member.nick.split('🔥 ')[1:]))
-                    print(f"RESET STREAK: {member.name}")
-                except discord.errors.Forbidden:
-                    print(
-                        f'RESET STREAK FORBIDDEN: nickname of {member.name} in {member.server.name}')
+                if user[2] == 0 and user[3] > 0:
+                    c.execute(
+                        "UPDATE USERS SET CURRENT = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+                    try:
+                        await client.change_nickname(
+                            member, ''.join(member.nick.split('🔥 ')[1:]))
+                        print(f"RESET STREAK: {member.name}")
+                    except discord.errors.Forbidden:
+                        print(
+                            f'RESET STREAK FORBIDDEN: nickname of {member.name} in {member.server.name}')
+                else:
+                    await changeNickname(user[1], user[0])
             else:
-                await changeNickname(user[1], user[0])
+                print(user[0], user[1])
+                c.execute(
+                    "DELETE FROM USERS WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
 
         c.execute("UPDATE TODAY SET DATE = ?", (getTodayStr(),))
         conn.commit()
