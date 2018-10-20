@@ -90,12 +90,14 @@ async def top(ctx, *args):
 
 
 @client.command(pass_context=True)
-async def streak(ctx):
+async def streak(ctx, *args):
     # it works so wont check for conn == None etc
+    lval = ["TOTAL", "HIGHEST"]
+    which = args[0] if args and args[0].upper() in lval else "CURRENT"
     user = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
     if(not memberExists(user)):
         await addMember(user)
-    await client.say("{} has {}🔥".format(user.name, getCurrentStreak(user.id, user.server.id)))
+    await client.say("{} has {}🔥".format(user.name, getInfoStreak(user.id, user.server.id, which)))
 
 
 @client.event
@@ -137,6 +139,21 @@ def getCurrentStreak(id, serverid):
         conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     c.execute("SELECT CURRENT FROM USERS WHERE (ID = ? AND SERVERID = ?)",
+              (id, serverid,))
+    d = c.fetchone()[0]
+    if g:
+        conn.close()
+        conn = None
+    return d
+
+
+def getInfoStreak(id, serverid, which):
+    global conn
+    g = True if conn == None else False
+    if g:
+        conn = sqlite3.connect("streakbot.db")
+    c = conn.cursor()
+    c.execute(f"SELECT {which.upper()} FROM USERS WHERE (ID = ? AND SERVERID = ?)",
               (id, serverid,))
     d = c.fetchone()[0]
     if g:
