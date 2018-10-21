@@ -184,13 +184,16 @@ async def updateStreaks():
                 if user[2] == 0 and user[3] > 0:
                     c.execute(
                         "UPDATE USERS SET CURRENT = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
-                    try:
-                        await client.change_nickname(
-                            member, ''.join(member.nick.split('🔥 ')[1:]))
+                    if member.nick != none:
+                        try:
+                            await client.change_nickname(
+                                member, ''.join(member.nick.split('🔥 ')[1:]))
+                            print(f"RESET STREAK: {member.name}")
+                        except discord.errors.Forbidden:
+                            print(
+                                f'RESET STREAK FORBIDDEN: nickname of {member.name} in {member.server.name}')
+                    else:
                         print(f"RESET STREAK: {member.name}")
-                    except discord.errors.Forbidden:
-                        print(
-                            f'RESET STREAK FORBIDDEN: nickname of {member.name} in {member.server.name}')
                 else:
                     await changeNickname(user[1], user[0])
             else:

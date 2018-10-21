@@ -4,9 +4,9 @@ from datetime import datetime
 conn = sqlite3.connect('streakbot.db')
 c = conn.cursor()
 
-c.execute("update USERS set CURRENT = (HIGHEST + CURRENT)")
-for rows in c.execute("SELECT CURRENT FROM USERS"):
-    print(rows[0])
+c.execute("update USERS set CURRENT = (HIGHEST + CURRENT) WHERE DAILY = 0")
+for rows in c.execute("SELECT CURRENT, ID FROM USERS"):
+    print(rows)
 conn.close()
 
 # i = datetime.now()
