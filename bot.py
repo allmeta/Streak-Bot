@@ -184,7 +184,7 @@ async def updateStreaks():
                 if user[2] == 0 and user[3] > 0:
                     c.execute(
                         "UPDATE USERS SET CURRENT = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
-                    if member.nick != none:
+                    if member.nick != None:
                         try:
                             await client.change_nickname(
                                 member, ''.join(member.nick.split('🔥 ')[1:]))
