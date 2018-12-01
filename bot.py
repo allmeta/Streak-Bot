@@ -3,7 +3,7 @@ from discord.ext import commands
 import asyncio
 import json
 import io
-from datetime import datetime, date
+import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import sqlite3
 
@@ -209,10 +209,10 @@ async def updateStreaks():
         print("Day hasn't changed")
     # resub for next day
     if(scheduler != None):
-        i = datetime.now()
+        i = datetime.date.today()+datetime.timedelta(days=1)
         print(f"New job executes in {24-i.hour} hours")
         scheduler.add_job(updateStreaks, 'date',
-                          run_date=date(i.year, i.month, i.day+1))
+                          run_date=datetime.date(i.year, i.month, i.day))
     else:
         await subscribeToTimeout()
 
@@ -241,13 +241,13 @@ async def changeNickname(serverid, userid):
 async def subscribeToTimeout():
     global scheduler
     # timer to update streaks
-    i = datetime.now()
+    i = datetime.date.today()+datetime.timedelta(days=1)
     scheduler = AsyncIOScheduler()
     scheduler.start()
     # scheduler.add_job(updateStreaks, 'interval', seconds=10)
     print(f"New job executes in {24-i.hour} hours")
     scheduler.add_job(updateStreaks, 'date',
-                      run_date=date(i.year, i.month, i.day+1))
+                      run_date=datetime.date(i.year, i.month, i.day))
 
 
 def getTodayStr():
