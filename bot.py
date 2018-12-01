@@ -251,7 +251,7 @@ async def subscribeToTimeout():
 
 
 def getTodayStr():
-    i = datetime.now()
+    i = datetime.datetime.now()
     return "%s/%s/%s" % (i.day, i.month, i.year)
 
 
