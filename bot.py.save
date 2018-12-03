@@ -3,7 +3,7 @@ from discord.ext import commands
 import asyncio
 import json
 import io
-import datetime
+from datetime import datetime, date
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import sqlite3
 
@@ -18,14 +18,6 @@ except NameError:
 client = commands.Bot(command_prefix='.')
 scheduler = None
 conn = None
-streakIcon = ""
-
-
-def setStreakIcon():
-    global streakIcon
-    d = datetime.datetime.today().month
-    streakIcon = {10: '🎃', 12: '⛄'}.get(d, '🔥')
-    # 🔥 is defualt if not found
 
 
 @client.command(pass_context=True)  # nani
@@ -87,7 +79,7 @@ async def top(ctx, *args):
         embed.add_field(name=f"#{eIndex+1}",
                         value=emotes[eIndex], inline=True)
         embed.add_field(name=f"> {ctx.message.author.server.get_member(sortedUsers[i][0]).name}",
-                        value=f"{sortedUsers[i][1]} {streakIcon}", inline=True)
+                        value=f"{sortedUsers[i][1]} 🔥", inline=True)
 
     embed.set_thumbnail(
         url='https://www.shareicon.net/download/2016/08/19/817655_podium_512x512.png')
@@ -96,16 +88,13 @@ async def top(ctx, *args):
         conn.close()
         conn = None
 
-
 @client.command(pass_context=True)
-async def streak(ctx, *args):
+async def streak(ctx):
     # it works so wont check for conn == None etc
-    lval = ["TOTAL", "HIGHEST"]
-    which = args[0] if args and args[0].upper() in lval else "CURRENT"
     user = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
     if(not memberExists(user)):
         await addMember(user)
-    await client.say(f"<@{user.id}> has {getInfoStreak(user.id, user.server.id, which)}{streakIcon}"
+    await client.say("{} has {}🔥".format(user.name, getCurrentStreak(user.id, user.server.id)))
 
 
 @client.event
@@ -155,62 +144,36 @@ def getCurrentStreak(id, serverid):
     return d
 
 
-def getInfoStreak(id, serverid, which):
-    global conn
-    g = True if conn == None else False
-    if g:
-        conn = sqlite3.connect("streakbot.db")
-    c = conn.cursor()
-    c.execute(f"SELECT {which.upper()} FROM USERS WHERE (ID = ? AND SERVERID = ?)",
-              (id, serverid,))
-    d = c.fetchone()[0]
-    if g:
-        conn.close()
-        conn = None
-    return d
-
-
 async def updateStreaks():
     # check date
     global conn, scheduler
     conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
-
-    setStreakIcon()
-
     c.execute("SELECT DATE FROM TODAY")
     if getTodayStr() != c.fetchone()[0]:
         print("Day changed, updating streaks!")
         c.execute("SELECT ID, SERVERID, DAILY, CURRENT FROM USERS")
         users = c.fetchall()
         for user in users:
-            member = client.get_server(user[1]).get_member(user[0])
-            if member != None:
-                if member.voice.voice_channel == None:
+            member = client.get_server(user[1]).get_member(user[0]if member != None:
+            	if member.voice.voice_channel == None:
                     c.execute(
-                        "UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
-                else:
+                    	"UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+            	else:
                     giveStreak(member)
 
-                if user[2] == 0 and user[3] > 0:
-                    c.execute(
-                        "UPDATE USERS SET CURRENT = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
-                    if member.nick != None:
-                        try:
-                            await client.change_nickname(
-                                member, ''.join(member.nick.split(f'{streakIcon} ')[1:]))
-                            print(f"RESET STREAK: {member.name}")
-                        except discord.errors.Forbidden:
-                            print(
-                                f'RESET STREAK FORBIDDEN: nickname of {member.name} in {member.server.name}')
-                    else:
-                        print(f"RESET STREAK: {member.name}")
-                else:
-                    await changeNickname(user[1], user[0])
-            else:
-                print(user[0], user[1])
+            if user[2] == 0 and user[3] > 0:
                 c.execute(
-                    "DELETE FROM USERS WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+                    "UPDATE USERS SET CURRENT = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+                try:
+                    await client.change_nickname(
+                        member, ''.join(member.nick.split('🔥 ')[1:]))
+                    print(f"RESET STREAK: {member.name}")
+                except discord.errors.Forbidden:
+                    print(
+                        f'RESET STREAK FORBIDDEN: nickname of {member.name} in {member.server.name}')
+            else:
+                await changeNickname(user[1], user[0])
 
         c.execute("UPDATE TODAY SET DATE = ?", (getTodayStr(),))
         conn.commit()
@@ -220,9 +183,10 @@ async def updateStreaks():
         print("Day hasn't changed")
     # resub for next day
     if(scheduler != None):
-        i = datetime.date.today()+datetime.timedelta(days=1)
+        i = datetime.now()
+        print(f"New job executes in {24-i.hour} hours")
         scheduler.add_job(updateStreaks, 'date',
-                          run_date=datetime.date(i.year, i.month, i.day))
+                          run_date=date(i.year, i.month, i.day+1))
     else:
         await subscribeToTimeout()
 
@@ -233,16 +197,16 @@ async def changeNickname(serverid, userid):
         try:
             userobj = client.get_server(serverid).get_member(userid)
             nick = userobj.nick
-            if nick != None and f'{streakIcon} ' in nick:
-                nick = ''.join(userobj.nick.split(f'{streakIcon} ')[1:])
+            if nick != None and '🔥 ' in nick:
+                nick = ''.join(userobj.nick.split('🔥 ')[1:])
             elif nick == None:
                 nick = userobj.name
             try:
                 await client.change_nickname(
-                    userobj, f"{strk}{streakIcon} {nick}")
+                    userobj, f"{strk}🔥 {nick}")
             except discord.errors.HTTPException as e:
                 print(
-                    f"{e} when setting nickname of {userobj.name} to {strk}{streakIcon} {nick}")
+                    f"{e} when setting nickname of {userobj.name} to {strk}🔥 {nick}")
         except discord.errors.Forbidden:
             print(
                 f'FORBIDDEN: nickname of {userobj.name} in {userobj.server.name}')
@@ -251,16 +215,17 @@ async def changeNickname(serverid, userid):
 async def subscribeToTimeout():
     global scheduler
     # timer to update streaks
-    i = datetime.date.today()+datetime.timedelta(days=1)
+    i = datetime.now()
     scheduler = AsyncIOScheduler()
     scheduler.start()
     # scheduler.add_job(updateStreaks, 'interval', seconds=10)
+    print(f"New job executes in {24-i.hour} hours")
     scheduler.add_job(updateStreaks, 'date',
-                      run_date=datetime.date(i.year, i.month, i.day))
+                      run_date=date(i.year, i.month, i.day+1))
 
 
 def getTodayStr():
-    i = datetime.datetime.now()
+    i = datetime.now()
     return "%s/%s/%s" % (i.day, i.month, i.year)
 
 
@@ -271,7 +236,7 @@ def updateLastJoined(member):
         conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     c.execute("UPDATE USERS SET LASTJOINED = ? WHERE (ID = ? AND SERVERID = ?)",
-              (datetime.datetime.now().ctime(), member.id, member.server.id,))
+              (datetime.now().ctime(), member.id, member.server.id,))
     conn.commit()
     if g:
         conn.close()
@@ -300,7 +265,7 @@ async def addMember(member):
         conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
     c.execute("INSERT INTO USERS VALUES (?,?,?,?,?,?,?)",
-              (member.id, member.server.id, datetime.datetime.now().ctime(), 0, 0, 0, 0,))
+              (member.id, member.server.id, datetime.now().ctime(), 0, 0, 0, 0,))
     conn.commit()
     if g:
         conn.close()
