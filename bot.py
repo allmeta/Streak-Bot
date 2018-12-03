@@ -234,7 +234,7 @@ async def changeNickname(serverid, userid):
         try:
             userobj = client.get_server(serverid).get_member(userid)
             nick = userobj.nick
-            if nick is None:
+            if nick is not None:
                 for x in icons:
                     if x+' ' in nick:
                         nick = ''.join(userobj.nick.split(f'{x} ')[1:])
