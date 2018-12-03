@@ -18,6 +18,14 @@ except NameError:
 client = commands.Bot(command_prefix='.')
 scheduler = None
 conn = None
+streakIcon = ""
+
+
+def setStreakIcon():
+    global streakIcon
+    d = datetime.datetime.today().month
+    streakIcon = {10: '🎃', 12: '⛄'}.get(d, '🔥')
+    # 🔥 is defualt if not found
 
 
 @client.command(pass_context=True)  # nani
@@ -79,7 +87,7 @@ async def top(ctx, *args):
         embed.add_field(name=f"#{eIndex+1}",
                         value=emotes[eIndex], inline=True)
         embed.add_field(name=f"> {ctx.message.author.server.get_member(sortedUsers[i][0]).name}",
-                        value=f"{sortedUsers[i][1]} 🔥", inline=True)
+                        value=f"{sortedUsers[i][1]} {streakIcon}", inline=True)
 
     embed.set_thumbnail(
         url='https://www.shareicon.net/download/2016/08/19/817655_podium_512x512.png')
@@ -97,7 +105,7 @@ async def streak(ctx, *args):
     user = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
     if(not memberExists(user)):
         await addMember(user)
-    await client.say("<@{}> has {}🔥".format(user.id, getInfoStreak(user.id, user.server.id, which)))
+    await client.say(f"<@{user.id}> has {getInfoStreak(user.id, user.server.id, which)}{streakIcon}"
 
 
 @client.event
@@ -167,6 +175,9 @@ async def updateStreaks():
     global conn, scheduler
     conn = sqlite3.connect("streakbot.db")
     c = conn.cursor()
+
+    setStreakIcon()
+
     c.execute("SELECT DATE FROM TODAY")
     if getTodayStr() != c.fetchone()[0]:
         print("Day changed, updating streaks!")
@@ -187,7 +198,7 @@ async def updateStreaks():
                     if member.nick != None:
                         try:
                             await client.change_nickname(
-                                member, ''.join(member.nick.split('🔥 ')[1:]))
+                                member, ''.join(member.nick.split(f'{streakIcon} ')[1:]))
                             print(f"RESET STREAK: {member.name}")
                         except discord.errors.Forbidden:
                             print(
@@ -223,16 +234,16 @@ async def changeNickname(serverid, userid):
         try:
             userobj = client.get_server(serverid).get_member(userid)
             nick = userobj.nick
-            if nick != None and '🔥 ' in nick:
-                nick = ''.join(userobj.nick.split('🔥 ')[1:])
+            if nick != None and f'{streakIcon} ' in nick:
+                nick = ''.join(userobj.nick.split(f'{streakIcon} ')[1:])
             elif nick == None:
                 nick = userobj.name
             try:
                 await client.change_nickname(
-                    userobj, f"{strk}🔥 {nick}")
+                    userobj, f"{strk}{streakIcon} {nick}")
             except discord.errors.HTTPException as e:
                 print(
-                    f"{e} when setting nickname of {userobj.name} to {strk}🔥 {nick}")
+                    f"{e} when setting nickname of {userobj.name} to {strk}{streakIcon} {nick}")
         except discord.errors.Forbidden:
             print(
                 f'FORBIDDEN: nickname of {userobj.name} in {userobj.server.name}')
