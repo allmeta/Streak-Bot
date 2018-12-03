@@ -105,7 +105,7 @@ async def streak(ctx, *args):
     user = ctx.message.mentions[0] if ctx.message.mentions else ctx.message.author
     if(not memberExists(user)):
         await addMember(user)
-    await client.say(f"<@{user.id}> has {getInfoStreak(user.id, user.server.id, which)}{streakIcon}"
+    await client.say(f"<@{user.id}> has {getInfoStreak(user.id, user.server.id, which)}{streakIcon}")
 
 
 @client.event
