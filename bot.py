@@ -18,13 +18,14 @@ except NameError:
 client = commands.Bot(command_prefix='.')
 scheduler = None
 conn = None
+icons=['🎃','⛄','🔥']
 streakIcon = ""
 
 
 def setStreakIcon():
-    global streakIcon
+    global streakIcon, icons
     d = datetime.datetime.today().month
-    streakIcon = {10: '🎃', 12: '⛄'}.get(d, '🔥')
+    streakIcon = {10: icons[0], 12: icons[1]}.get(d, icons[-1])
     # 🔥 is defualt if not found
 
 
@@ -233,9 +234,12 @@ async def changeNickname(serverid, userid):
         try:
             userobj = client.get_server(serverid).get_member(userid)
             nick = userobj.nick
-            if nick != None and f'{streakIcon} ' in nick:
-                nick = ''.join(userobj.nick.split(f'{streakIcon} ')[1:])
-            elif nick == None:
+            if nick is None:
+                for x in icons:
+                    if x+' ' in nick:
+                        nick = ''.join(userobj.nick.split(f'{x} ')[1:])
+                        break
+            else:
                 nick = userobj.name
             try:
                 await client.change_nickname(
