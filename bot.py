@@ -18,7 +18,7 @@ except NameError:
 client = commands.Bot(command_prefix='.')
 scheduler = None
 conn = None
-icons=['🎃','⛄','🔥']
+icons = ['🎃', '⛄', '🔥']
 streakIcon = ""
 
 
@@ -188,14 +188,22 @@ async def updateStreaks():
             member = client.get_server(user[1]).get_member(user[0])
             if member != None:
                 if member.voice.voice_channel == None:
-                    c.execute(
-                        "UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+                    try:
+                        c.execute(
+                            "UPDATE USERS SET DAILY = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+                    except sqlite3.OperationalError as e:
+                        print(e)
+                        await client.send_message(client.get_user_info(128215967070289921), e)
                 else:
                     giveStreak(member)
 
                 if user[2] == 0 and user[3] > 0:
-                    c.execute(
-                        "UPDATE USERS SET CURRENT = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+                    try:
+                        c.execute(
+                            "UPDATE USERS SET CURRENT = 0 WHERE (ID = ? AND SERVERID = ?)", (user[0], user[1],))
+                    except sqlite3.OperationalError as e:
+                        print(e)
+                        await client.send_message(client.get_user_info(128215967070289921), e)
                     if member.nick != None:
                         try:
                             await client.change_nickname(
