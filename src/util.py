@@ -62,25 +62,23 @@ def user_has_joined_today(conn, userid, serverid):
 
 
 async def user_update_nickname(conn, bot, icons, member, serverid):
-    userid = member.id
-    current_streak = get_current_streak(conn, userid, serverid)
-    if current_streak[0] > 0:
-        #user = bot.get_server(serverid).get_member(userid)
-        user = bot.get_user(userid)
-        if get_streak_icon(icons) in member.nick:
-            nickname = member.nick.split(get_streak_icon(icons) + ' ', 1)[1]
-        else:
-            nickname = member.nick
+    nick=member.display_name
+    current_icon = get_streak_icon(icons)
+    current_streak = get_current_streak(conn, member.id, serverid)[0]
+
+    if current_streak > 0:
+        user = bot.get_user(member.id)
         # checks if they has a nickname, and tries to match on icons
         # same as in reset_nickname
-        if (match:=re.compile(f'^d+({"|".join(icons)})').match(nickname)):
-            nickname = ''.join(nickname.split(match.group(1))[1:])
-        new_nickname = f'{current_streak[0]}{get_streak_icon(icons)} {nickname}'
+        s=f'^\d+({"|".join(icons)})'
+        if (match:=re.compile(s).match(nick)):
+            nick = ''.join(nick.split(match.group(1))[1:])
+        nick = f'{current_streak}{current_icon}{nick}'
         try:
-            await member.edit(nick=new_nickname)
+            await member.edit(nick=nick)
         except discord.errors.Forbidden:
             print(
-                'Change nickname of {user.name} in {user.server.name}')
+                'Change nickname of {user.display_name} in {user.server.name}')
 
 
 def user_update_last_joined(conn, userid, serverid):
