@@ -60,7 +60,8 @@ class Streak(commands.Cog):
     async def on_message(self, message):
         if message.content.startswith('.streak'):
             if util.get_current_streak(self.conn, message.author.id, message.author.guild.id):
-                await message.channel.send('Current streak for ' + message.author.nick + ' is ' + str(util.get_current_streak(self.conn, message.author.id, message.author.guild.id)[0]))
+                strk_count=util.get_current_streak(self.conn, message.author.id, message.author.guild.id)[0]
+                await message.channel.send(f'Current streak for {message.author.mention} is {strk_count}')
             else:
                 await message.channel.send('No streak for the weak.')
             await message.delete()
