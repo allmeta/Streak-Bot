@@ -1,12 +1,14 @@
+import discord
+from datetime import datetime, timedelta
+from discord.ext import commands
 import asyncio
-from datetime import datetime
+import util
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import sqlite3
-import util
-import debug
 
+client = discord.Client()
 
-class Streak(commands.cfg):
+class Streak(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.scheduler = None
@@ -18,20 +20,31 @@ class Streak(commands.cfg):
 
         self.subscribe_to_timeout()
         self.update()
+        
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        if not before.channel and after.channel:
+            if not util.user_exists(self.conn, member.id, after.channel.guild.id):
+                util.user_add(self.conn, member.id, after.channel.guild.id)
+            if not util.user_has_joined_today(self.conn, member.id, after.channel.guild.id):
+                util.give_streak(self.conn, member.id, after.channel.guild.id)
+            await util.user_update_nickname(self.conn, self.bot, self.icons,
+                                      member, after.channel.guild.id)
+            util.user_update_last_joined(self.conn, member.id, after.channel.guild.id)
 
     def connect(self):
         return sqlite3.connect(self.db)
 
-    async def subscribe_to_timeout(self):
-        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-        self.scheduler.start()
-        self.scheduler.add_job(self.update,
-                               'date',
-                               run_date=datetime.date(tomorrow.year,
-                                                      tomorrow.month,
-                                                      tomorrow.day))
+    def subscribe_to_timeout(self):
+        tomorrow = datetime.today() + timedelta(days=1)
+        if self.scheduler.state != 1:
+            self.scheduler.start()
+            self.scheduler.add_job(self.update,
+                                'date',
+                                run_date=datetime.date(tomorrow))
 
-    async def update(self):
+    def update(self):
         # check if date has changed
         if util.day_changed(self.conn):
             users = util.update_users(self.conn, self.bot)
@@ -39,18 +52,20 @@ class Streak(commands.cfg):
                 util.reset_nickname(self.bot, self.conn, self.user,
                                     self.streak_icon)
         else:
-            debug.info('Day not changed')
+            print('Day not changed')
         # add another job for next day
         self.subscribe_to_timeout()
 
-    # events
-    @client.event
-    async def on_voice_state_update(before, after):
-        if bool(before.voice.voice_channel) != bool(after.voice.voice_channel):
-            if not util.user_exists(self.conn, after.id, after.server.id):
-                util.add_user(self.conn, after.id, after.server.id)
-            if not util.has_joined_today(self.conn, after.id, after.server.id):
-                util.give_streak(self.conn, after.id, after.server.id)
-            util.user_update_nickname(self.conn, self.bot, self.icons,
-                                      after.id, after.server.id)
-            util.user_update_last_joined(self.conn, after.id, after.server.id)
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.content.startswith('.streak'):
+            if util.get_current_streak(self.conn, message.author.id, message.author.guild.id):
+                await message.channel.send('Current streak for ' + message.author.nick + ' is ' + str(util.get_current_streak(self.conn, message.author.id, message.author.guild.id)[0]))
+            else:
+                await message.channel.send('No streak for the weak.')
+            await message.delete()
+
+    
+
+def setup(bot):
+    bot.add_cog(Streak(bot))
