@@ -47,7 +47,7 @@ class Bot(commands.Bot):
     async def load_all_extensions(self):
         await self.wait_until_ready()
         await asyncio.sleep(1)  # ensure that on_ready has completed and finished printing
-        cogs = [x.stem for x in Path('cogs').glob('*.py')]
+        cogs = [x.stem for x in Path('src/cogs').glob('*.py')]
         for extension in cogs:
             try:
                 self.load_extension(f'cogs.{extension}')
