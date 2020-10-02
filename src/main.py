@@ -10,7 +10,7 @@ from discord.ext import commands
 import sqlite3
 
 def config_load():
-    with open('data/config.json', 'r', encoding='utf-8-sig') as doc:
+    with open('src/data/config.json', 'r', encoding='utf-8-sig') as doc:
         return json.load(doc)
 
 
