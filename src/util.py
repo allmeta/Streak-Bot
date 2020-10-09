@@ -72,7 +72,7 @@ async def user_update_nickname(conn, bot, icons, member, serverid):
         # same as in reset_nickname
         s=f'^\d+({"|".join(icons)})\ '
         if (match:=re.compile(s).match(nick)):
-            nick = ''.join(nick.split(match.group(1))[1:])
+            nick = ''.join(nick.split(match.group(0))[1:])
         nick = f'{current_streak}{current_icon} {nick}'
         try:
             await member.edit(nick=nick)
