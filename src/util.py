@@ -70,7 +70,7 @@ async def user_update_nickname(conn, bot, icons, member, serverid):
         user = bot.get_user(member.id)
         # checks if they has a nickname, and tries to match on icons
         # same as in reset_nickname
-        s=f'^\d+({"|".join(icons)})\ '
+        s=f'^\d+({"|".join(icons)})\s+'
         if (match:=re.compile(s).match(nick)):
             nick = ''.join(nick.split(match.group(0))[1:])
         nick = f'{current_streak}{current_icon} {nick}'
