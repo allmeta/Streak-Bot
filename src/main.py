@@ -10,8 +10,7 @@ from discord.ext import commands
 import sqlite3
 
 def config_load():
-    with open('src/data/config.json', 'r', encoding='utf-8-sig') as doc:
-        return json.load(doc)
+    return json.loads(open('src/data/config.json').read())
 
 
 async def run():
@@ -58,9 +57,8 @@ class Bot(commands.Bot):
             print('-' * 10)
 
     async def on_ready(self):
-        print('-' * 10)
         self.app_info = await self.application_info()
-        print('-' * 10)
+        print('---- bot ready ----')
 
     async def on_message(self, message):
         if message.author.bot:
