@@ -1,4 +1,4 @@
 \.idea/
 \__pycache__
 \streakbot.db
-./src/data/config.json
+\src/data/config.json
