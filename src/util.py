@@ -5,7 +5,7 @@ import re
 
 def get_streak_icon(icons):
     d = datetime.today().month
-    return {10: icons[0], 12: icons[1]}.get(d, icons[-1])
+    return {10: icons[0], 12: icons[1]}.get(d, icons[-1]) # gives last icon as default
 
 
 def format_db_date():
@@ -19,13 +19,21 @@ def day_changed(conn):
         c.execute('select last_date from date')
         return format_db_date() != c.fetchone()[0]
 
+def update_day(conn):
+    with conn:
+        c = conn.cursor()
+        c.execute('update date set last_date = ?', (format_db_date(),))
+        conn.commit()
 
-def get_current_streak(conn, userid, serverid):
+
+def get_current_streak(conn,userid,serverid):
     with conn:
         c = conn.cursor()
         c.execute(
             'select current_streak from users where (userid=? and serverid=?)', (userid, serverid))
-        return c.fetchone()
+        if f:=c.fetchone():
+            return f[0]
+        return None
 
 
 def get_users(conn):
@@ -35,7 +43,8 @@ def get_users(conn):
         return c.fetchall()
 
 
-def user_exists(conn, userid, serverid):
+def user_exists(opts):
+    conn,userid,serverid=opts
     with conn:
         c = conn.cursor()
         c.execute('select 1 from users where (userid=? and serverid=?)',
@@ -43,7 +52,8 @@ def user_exists(conn, userid, serverid):
         return bool(c.fetchone())
 
 
-def user_add(conn, userid, serverid):
+def user_add(opts):
+    conn,userid,serverid=opts
     with conn:
         c = conn.cursor()
         c.execute('''
@@ -59,7 +69,8 @@ def user_add(conn, userid, serverid):
             (userid, serverid, 0, 0, 0, 0,datetime.now().ctime()))
 
 
-def user_has_joined_today(conn, userid, serverid):
+def user_has_joined_today(opts):
+    conn,userid,serverid=opts
     with conn:
         c = conn.cursor()
         c.execute(
@@ -72,15 +83,15 @@ def user_has_joined_today(conn, userid, serverid):
 async def user_update_nickname(conn, bot, icons, member, serverid):
     nick=member.display_name
     current_icon = get_streak_icon(icons)
-    current_streak = get_current_streak(conn, member.id, serverid)[0]
+    current_streak = get_current_streak(conn, member.id, serverid)
 
     if current_streak > 0:
         user = await bot.fetch_user(member.id)
         # checks if they has a nickname, and tries to match on icons
         # same as in reset_nickname
-        s=f'^\d+({"|".join(icons)})\ '
+        s=f'^\d+({"|".join(icons)}\ )'
         if (match:=re.compile(s).match(nick)):
-            nick = ''.join(nick.split(match.group(1))[1:])
+            nick = ''.join(nick.split(match.group(1))[1:]).strip()
         nick = f'{current_streak}{current_icon} {nick}'
         try:
             await member.edit(nick=nick)
@@ -88,7 +99,8 @@ async def user_update_nickname(conn, bot, icons, member, serverid):
             print(f'FORBIDDEN: Change nickname of {user.display_name} in {user.server.name}')
 
 
-def user_update_last_joined(conn, userid, serverid):
+def user_update_last_joined(opts):
+    conn,userid,serverid=opts
     with conn:
         c = conn.cursor()
         c.execute('update users set last_joined=? where (userid=? and serverid=?)',
@@ -102,7 +114,7 @@ async def update_users(conn, bot):
         user = await bot.fetch_guild(serverid).fetch_member(userid)
         # dont reset if in voice, give streak instead
         if user.voice.channel:
-            give_streak(conn, userid, serverid)
+            give_streak((conn, userid, serverid))
         else:
             with conn:
                 c = conn.cursor()
@@ -127,8 +139,10 @@ def reset_nickname(bot, conn, user, streak_icon):
         c.execute(
             'update users set current_streak=0 where (userid=? and serverid=?)',
             (user.id, user.server.id))
+        conn.commit()
 
-def give_streak(conn, userid, serverid):
+def give_streak(opts):
+    conn, userid, serverid=opts
     with conn:
         c = conn.cursor()
         c.execute(

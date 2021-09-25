@@ -1,5 +1,6 @@
 import discord
 from datetime import datetime, timedelta
+from pytz import timezone
 from discord.ext import commands
 import asyncio
 import util
@@ -18,41 +19,43 @@ class Streak(commands.Cog):
         self.db = 'streakbot.db'
         self.conn = self.connect()
         self.scheduler = AsyncIOScheduler()
+        self.timezone=timezone('Europe/Oslo')
 
         self.subscribe_to_timeout()
         self.update()
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        if not before.channel and after.channel:
-            if not util.user_exists(self.conn, member.id, after.channel.guild.id):
-                util.user_add(self.conn, member.id, after.channel.guild.id)
-            if not util.user_has_joined_today(self.conn, member.id, after.channel.guild.id):
-                util.give_streak(self.conn, member.id, after.channel.guild.id)
-            await util.user_update_nickname(self.conn, self.bot, self.icons,
-                                      member, after.channel.guild.id)
-            util.user_update_last_joined(self.conn, member.id, after.channel.guild.id)
+        c=after.channel or before.channel
+        opts=(self.conn, member.id, c.guild.id)
+        if not before.channel and after.channel: # when joining a channel, not switching
+            if not util.user_exists(opts):
+                util.user_add(opts)
+            if not util.user_has_joined_today(opts):
+                util.give_streak(opts)
+            await util.user_update_nickname(self.conn, self.bot, self.icons, member, c.guild.id)
+            util.user_update_last_joined(opts)
 
     def connect(self):
         return sqlite3.connect(self.db)
 
     def subscribe_to_timeout(self):
-        tomorrow = datetime.today() + timedelta(days=1)
+        tomorrow = datetime.now(self.timezone) + timedelta(days=1)
         if self.scheduler.state != 1:
             self.scheduler.start()
-            self.scheduler.add_job(self.update,
-                                'date',
-                                run_date=datetime.date(tomorrow))
+            self.scheduler.add_job(self.update, 'date', run_date=datetime.date(tomorrow))
 
     async def update(self):
         # check if date has changed
         if util.day_changed(self.conn):
-            users = await util.update_users(self.conn, self.bot)
-            for user in users:
-                util.reset_nickname(self.bot, self.conn, self.user,
-                                    self.streak_icon)
+            print('---- Day changed - updating users ----')
+            util.update_day(self.conn)
+
+            reset_users = await util.update_users(self.conn, self.bot)
+            for user in reset_users:
+                util.reset_nickname(self.bot, self.conn, self.user, self.streak_icon)
         else:
-            print('Day not changed')
+            print('---- Day not changed ----')
         # add another job for next day
         self.subscribe_to_timeout()
 
@@ -61,23 +64,28 @@ class Streak(commands.Cog):
         message=ctx.message
         user=(next(iter(message.mentions or []), None)) or ctx.author
         if strk_count:=util.get_current_streak(self.conn, user.id, user.guild.id):
-            strk_count=strk_count[0]
-            await message.channel.send(f'Current streak for {user.mention} is {strk_count}')
+            await ctx.send(f'Current streak for {user.mention} is {strk_count}')
         else:
-            await message.channel.send('No streak for the weak.')
+            await ctx.send('No streak for the weak 😎')
 
     @commands.command()
     async def scores(self, ctx):
         s=util.get_scores(self.conn, ctx.message.guild.id)
         if not s:
-            return await ctx.send("No streaks bro")
+            return await ctx.send("No streaks in the server bro 😩")
 
         s.sort(key=lambda x: -x[-1])
-        s=[(await self.bot.fetch_user(i[0]),i[1],i[2],i[3]) for i in s]
+        s=[(await self.bot.fetch_user(i[0]),*i[1:]) for i in s] # python spread operator
 
         msg=tabulate(s,headers=["User","Current","Highest","Total"])
         msg=f"```css\n{msg}```"
         await ctx.send(msg)
+
+    @commands.command()
+    async def next(self, ctx):
+        if n:=self.scheduler.get_jobs()[0].next_run_time:
+            return await ctx.send(str(n-datetime.now(self.timezone)))
+        await ctx.send("Shit dette funka bad as 😩")
 
 
 
