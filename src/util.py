@@ -1,4 +1,5 @@
 from datetime import datetime
+from pytz import timezone
 import discord
 from discord.utils import get
 import re
@@ -9,7 +10,7 @@ def get_streak_icon(icons):
 
 
 def format_db_date():
-    now = datetime.today()
+    now = datetime.now(timezone('Europe/Oslo'))
     return f'{now.year}.{now.month}.{now.day}'
 
 

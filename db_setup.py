@@ -1,4 +1,6 @@
 import sqlite3
+from datetime import datetime
+from pytz import timezone
 
 conn = sqlite3.connect('streakbot.db')
 c = conn.cursor()
@@ -10,5 +12,8 @@ c.execute('''CREATE TABLE users
 # Create table - date
 c.execute('''CREATE TABLE date
              ([id] INTEGER PRIMARY KEY, [last_date] date)''')
-            
+
+now=datetime.now(timezone('Europe/Oslo'))
+c.execute('INSERT INTO date VALUES (0,?)',(f'{now.year}.{now.month}.{now.day}'))
+
 conn.commit()
