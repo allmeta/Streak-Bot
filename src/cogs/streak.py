@@ -20,9 +20,8 @@ class Streak(commands.Cog):
         self.conn = self.connect()
         self.scheduler = AsyncIOScheduler()
         self.timezone=timezone('Europe/Oslo')
-
-        self.subscribe_to_timeout()
-        self.update()
+        self.loop = asyncio.get_event_loop()
+        self.loop.create_task(self.update())
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -49,11 +48,12 @@ class Streak(commands.Cog):
         # check if date has changed
         if util.day_changed(self.conn):
             print('---- Day changed - updating users ----')
-            util.update_day(self.conn)
-
             reset_users = await util.update_users(self.conn, self.bot)
             for user in reset_users:
-                util.reset_nickname(self.bot, self.conn, self.user, self.streak_icon)
+                if user != None:
+                    util.reset_nickname(self.bot, self.conn, user, self.streak_icon)
+            util.update_day(self.conn)
+            print('---- finished updating users ----')
         else:
             print('---- Day not changed ----')
         # add another job for next day
