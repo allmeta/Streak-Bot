@@ -14,6 +14,6 @@ c.execute('''CREATE TABLE date
              ([id] INTEGER PRIMARY KEY, [last_date] date)''')
 
 now=datetime.now(timezone('Europe/Oslo'))
-c.execute('INSERT INTO date VALUES (0,?)',(f'{now.year}.{now.month}.{now.day}'))
+c.execute('INSERT INTO date VALUES (0,?)',(f'{now.year}.{now.month}.{now.day}',))
 
 conn.commit()

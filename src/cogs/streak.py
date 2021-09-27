@@ -1,6 +1,6 @@
 import discord
 from datetime import datetime, timedelta
-from pytz import timezone
+from pytz import timezone,utc
 from discord.ext import commands
 import asyncio
 import util
@@ -23,6 +23,7 @@ class Streak(commands.Cog):
         self.loop = asyncio.get_event_loop()
         self.loop.create_task(self.update())
 
+
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         c=after.channel or before.channel
@@ -40,18 +41,18 @@ class Streak(commands.Cog):
 
     def subscribe_to_timeout(self):
         tomorrow = datetime.now(self.timezone) + timedelta(days=1)
+        tomorrow = tomorrow.replace(hour=0,minute=0,second=0,microsecond=0).astimezone(utc)
         if self.scheduler.state != 1:
             self.scheduler.start()
-            self.scheduler.add_job(self.update, 'date', run_date=datetime.date(tomorrow))
+            self.scheduler.add_job(self.update, 'date', run_date=tomorrow)
 
     async def update(self):
         # check if date has changed
         if util.day_changed(self.conn):
             print('---- Day changed - updating users ----')
             reset_users = await util.update_users(self.conn, self.bot)
-            for user in reset_users:
-                if user != None:
-                    util.reset_nickname(self.bot, self.conn, user, self.streak_icon)
+            for member in reset_users:
+                util.reset_nickname(self.bot, self.conn, member, self.streak_icon)
             util.update_day(self.conn)
             print('---- finished updating users ----')
         else:
@@ -73,9 +74,9 @@ class Streak(commands.Cog):
         s=util.get_scores(self.conn, ctx.message.guild.id)
         if not s:
             return await ctx.send("No streaks in the server bro 😩")
+        u=await asyncio.gather(*[self.bot.fetch_user(x[0]) for x in s])
+        s=[(x,*y[1:]) for x,y in zip(u,s)]
 
-        s.sort(key=lambda x: -x[-1])
-        s=[(await self.bot.fetch_user(i[0]),*i[1:]) for i in s] # python spread operator
 
         msg=tabulate(s,headers=["User","Current","Highest","Total"])
         msg=f"```css\n{msg}```"
