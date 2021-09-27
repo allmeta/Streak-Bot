@@ -86,14 +86,16 @@ async def user_update_nickname(conn, bot, icons, member, serverid):
     nick=member.display_name
     current_icon = get_streak_icon(icons)
     current_streak = get_current_streak(conn, member.id, serverid)
+    print(f"updating nickname of {nick}")
 
     if current_streak > 0:
         # checks if they has a nickname, and tries to match on icons
         # same as in reset_nickname
-        s=f'^\d+({"|".join(icons)}\ )'
+        s=f'^\d+({"|".join(icons)})'
         if (match:=re.compile(s).match(nick)):
             nick = ''.join(nick.split(match.group(1))[1:]).strip()
         nick = f'{current_streak}{current_icon} {nick}'
+        print(f"finished updating nickname: {nick}")
         try:
             await member.edit(nick=nick)
         except discord.errors.Forbidden:
@@ -111,22 +113,24 @@ def user_update_last_joined(opts):
 
 async def update_user(bot,conn,*args):
     userid,serverid,joined_today,current_streak=args
-
+    r=None
     g = await bot.fetch_guild(serverid)
     member = await g.fetch_member(userid)
     # dont reset if in voice, give streak instead
-    if member.voice != None:
+    # not working fuck discord.py
+    if member.voice and member.voice.channel != None:
+        print(f"{member.name} in voice, giving streak")
         give_streak((conn, userid, serverid))
     else:
+        if joined_today == 0 and current_streak > 0:
+            # set streak to 0 if user didn't join yesterday
+            r=member
         with conn:
             c = conn.cursor()
             c.execute(
                 'update users set joined_today=0 where (userid=? and serverid=?)',
                 (userid, serverid))
-    # set streak to 0 if user didn't join yesterday
-    if joined_today == 0 and current_streak > 0:
-        return member
-    return None
+    return r # return None or member to be reset
 
 async def update_users(conn, bot):
     # asyncio batch job xd
@@ -134,9 +138,10 @@ async def update_users(conn, bot):
     reset_users=await asyncio.gather(*users)
     return filter(lambda x: x != None, reset_users)
 
-def reset_nickname(bot, conn, member, streak_icon):
+async def reset_nickname(bot, conn, member, streak_icon):
+    nick=member.display_name
     try:
-        member.edit(nick=''.join(member.nick.split(f'{streak_icon} '[1:])))
+        await member.edit(nick=''.join(nick.split(f'{streak_icon} '[1:])))
     except discord.errors.Forbidden:
         print(f'FORBIDDEN: Change nickname on {member.name} in {member.guild.name}')
     with conn:

@@ -15,9 +15,12 @@ def config_load():
 
 async def run():
     config = config_load()
+    intents=discord.Intents.default()
+    intents.members=True
+    intents.voice_states=True
     bot = Bot(config=config,
               description=config['description'],
-              intents=discord.Intents.all(),
+              intents=intents,
               chunk_guids_at_startup=True,
     )
     try:

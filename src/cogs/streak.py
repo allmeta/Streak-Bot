@@ -52,7 +52,7 @@ class Streak(commands.Cog):
             print('---- Day changed - updating users ----')
             reset_users = await util.update_users(self.conn, self.bot)
             for member in reset_users:
-                util.reset_nickname(self.bot, self.conn, member, self.streak_icon)
+                await util.reset_nickname(self.bot, self.conn, member, self.streak_icon)
             util.update_day(self.conn)
             print('---- finished updating users ----')
         else:
