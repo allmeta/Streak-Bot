@@ -36,6 +36,11 @@ class Streak(commands.Cog):
             await util.user_update_nickname(self.conn, self.bot, self.icons, member, c.guild.id)
             util.user_update_last_joined(opts)
 
+    @commands.Cog.listener()
+    async def on_member_update(self, before, after):
+        if before.display_name != after.display_name:
+            await util.user_update_nickname(self.conn, self.bot, self.icons, after, after.guild.id)
+
     def connect(self):
         return sqlite3.connect(self.db)
 
