@@ -86,7 +86,6 @@ async def user_update_nickname(conn, bot, icons, member, serverid):
     nick=member.display_name
     current_icon = get_streak_icon(icons)
     current_streak = get_current_streak(conn, member.id, serverid)
-    print(f"updating nickname of {nick}")
 
     if current_streak > 0:
         # checks if they has a nickname, and tries to match on icons
@@ -95,7 +94,6 @@ async def user_update_nickname(conn, bot, icons, member, serverid):
         if (match:=re.compile(s).match(nick)):
             nick = ''.join(nick.split(match.group(1))[1:]).strip()
         nick = f'{current_streak}{current_icon} {nick}'
-        print(f"finished updating nickname: {nick}")
         try:
             await member.edit(nick=nick)
         except discord.errors.Forbidden:
@@ -115,7 +113,12 @@ async def update_user(bot,conn,*args):
     userid,serverid,joined_today,current_streak=args
     r=None
     g = await bot.fetch_guild(serverid)
-    member = await g.fetch_member(userid)
+    member = None
+    try:
+        member = await g.fetch_member(userid)
+    except discord.errors.NotFound:
+        print(f"{userid} not found in {g.name}")
+        return r
     # dont reset if in voice, give streak instead
     # not working fuck discord.py
     if member.voice and member.voice.channel != None:
