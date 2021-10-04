@@ -13,7 +13,6 @@ client = discord.Client()
 class Streak(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.scheduler = None
         self.icons = ['🎃', '⛄', '🔥']
         self.streak_icon = util.get_streak_icon(self.icons)
         self.db = 'streakbot.db'
@@ -22,6 +21,8 @@ class Streak(commands.Cog):
         self.timezone=timezone('Europe/Oslo')
         self.loop = asyncio.get_event_loop()
         self.loop.create_task(self.update())
+
+        self.scheduler.start()
 
 
     @commands.Cog.listener()
@@ -47,9 +48,8 @@ class Streak(commands.Cog):
     def subscribe_to_timeout(self):
         tomorrow = datetime.now(self.timezone) + timedelta(days=1)
         tomorrow = tomorrow.replace(hour=0,minute=0,second=0,microsecond=0).astimezone(utc)
-        if self.scheduler.state != 1:
-            self.scheduler.start()
-            self.scheduler.add_job(self.update, 'date', run_date=tomorrow)
+        self.scheduler.add_job(self.update, 'date', run_date=tomorrow)
+        print(f"---- Added new task due to {tomorrow} ----")
 
     async def update(self):
         # check if date has changed
@@ -89,7 +89,9 @@ class Streak(commands.Cog):
 
     @commands.command()
     async def next(self, ctx):
-        if n:=self.scheduler.get_jobs()[0].next_run_time:
+        j=self.scheduler.get_jobs()
+        if j: 
+            n=j[0].next_run_time
             return await ctx.send(str(n-datetime.now(self.timezone)))
         await ctx.send("Shit dette funka bad as 😩")
 
