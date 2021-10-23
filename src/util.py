@@ -189,6 +189,7 @@ def get_scores(conn, serverid):
             from users
             where serverid = ?
             order by total_streak desc
+            limit 20
             ''',
             (serverid,))
         return c.fetchall()

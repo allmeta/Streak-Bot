@@ -80,6 +80,7 @@ class Streak(commands.Cog):
         if not s:
             return await ctx.send("No streaks in the server bro 😩")
         u=await asyncio.gather(*[self.bot.fetch_user(x[0]) for x in s])
+        u=filter(lambda x: type(x) is discord.User ,u)
         s=[(x,*y[1:]) for x,y in zip(u,s)]
 
 
